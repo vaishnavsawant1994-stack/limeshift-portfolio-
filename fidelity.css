@@ -60,3 +60,38 @@ html{scroll-padding-top:70px}body{background:#101116;color:#f3f3f5;text-renderin
 .process-right{transform:translateY(-43px)}
 }
 @media(min-width:801px) and (max-height:810px){.process-right{transform:translateY(-29px)}}
+
+/* Portrait pointer fidelity: position-matched color light, clipped to the actual
+   transparent portrait silhouette. No color leaks into the hero background. */
+.hero-portrait-depth{isolation:isolate;transform-style:preserve-3d}
+.hero-portrait-depth::after,
+.hero-portrait-depth::before{
+ content:"";position:absolute;left:50%;top:0;height:100%;width:auto;
+ aspect-ratio:1086/1448;transform:translateX(-50%);pointer-events:none;
+ -webkit-mask-image:url("assets/hero-portrait.webp");mask-image:url("assets/hero-portrait.webp");
+ -webkit-mask-position:center;mask-position:center;
+ -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+ -webkit-mask-size:contain;mask-size:contain;
+ opacity:var(--color-intensity,0);
+}
+.hero-portrait-depth::after{
+ z-index:4;
+ background:
+ radial-gradient(ellipse 30% 29% at var(--color-x,50%) var(--color-y,35%),rgba(254,244,83,.96),rgba(255,90,150,.84) 47%,transparent 100%),
+ conic-gradient(from 70deg at var(--color-x,50%) var(--color-y,35%),#a6f628,#67d9ff,#fa5cd0,#fcad63,#b6fb40,#a6f628);
+ mix-blend-mode:color;
+}
+.hero-portrait-depth::before{
+ z-index:5;
+ background:radial-gradient(ellipse 19% 24% at var(--color-x,50%) var(--color-y,35%),rgba(247,255,183,.48),rgba(209,255,96,.1) 63%,transparent 100%);
+ mix-blend-mode:screen;
+}
+.hero-portrait-depth .eye-overlay{z-index:3}
+.hero-portrait-glow{transition:opacity .25s ease}
+.hero-portrait-wrap:has(.hero-portrait-depth[style*="--color-intensity"]) .hero-portrait-sheen{mix-blend-mode:screen}
+@media (hover:none),(pointer:coarse){
+ .hero-portrait-depth::before,.hero-portrait-depth::after{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+ .hero-portrait-depth::before,.hero-portrait-depth::after{display:none}
+}
