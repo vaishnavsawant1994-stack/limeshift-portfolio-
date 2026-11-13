@@ -1,0 +1,38 @@
+{
+  "finePointer": true,
+  "heroSpot": [
+    "58.03%",
+    "42.73%"
+  ],
+  "portraitTranslation": [
+    "3.30px",
+    "-1.33px"
+  ],
+  "gazeOverlayVisible": 0,
+  "services": {
+    "active": 3,
+    "widths": [
+      221,
+      221,
+      624,
+      221
+    ]
+  },
+  "galleryShift": "matrix(1, 0, 0, 1, -1345.63, 0)",
+  "processStage1": "0",
+  "processStage2": "1",
+  "processStage3": "2",
+  "processStage4": "3",
+  "toolProximityCount": 3,
+  "testimonialButtonMoved": [
+    0,
+    510
+  ],
+  "invalidContactFeedback": "Please enter your name (at least 2 characters).",
+  "footerSpot": [
+    "65.51036075373426%",
+    "77.80197328136148%"
+  ],
+  "consoleErrors": [],
+  "bentoOverlapCount": 0
+}

@@ -1,0 +1,87 @@
+[
+  {
+    "width": 1440,
+    "height": 900,
+    "overflows": 0,
+    "errors": [],
+    "hero": {
+      "head": 64,
+      "face": 648
+    },
+    "aboutHoles": null,
+    "serviceActive": 1,
+    "dialogOpened": true,
+    "galleryBefore": "matrix(1, 0, 0, 1, 0, 0)",
+    "galleryAfter": "matrix(1, 0, 0, 1, -1471.75, 0)"
+  },
+  {
+    "width": 1920,
+    "height": 1080,
+    "overflows": 0,
+    "errors": [],
+    "hero": {
+      "head": 82,
+      "face": 1039
+    },
+    "aboutHoles": null
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "overflows": 0,
+    "errors": [],
+    "hero": {
+      "head": 61,
+      "face": 615
+    },
+    "aboutHoles": null
+  },
+  {
+    "width": 1024,
+    "height": 768,
+    "overflows": 0,
+    "errors": [],
+    "hero": {
+      "head": 46,
+      "face": 451
+    },
+    "aboutHoles": null
+  },
+  {
+    "width": 768,
+    "height": 1024,
+    "overflows": 0,
+    "errors": [],
+    "hero": {
+      "head": 34,
+      "face": 269
+    },
+    "aboutHoles": null
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "overflows": 0,
+    "errors": [],
+    "hero": {
+      "head": 20,
+      "face": 62
+    },
+    "aboutHoles": null,
+    "menuVisible": "visible",
+    "menuClosed": true
+  },
+  {
+    "width": 320,
+    "height": 720,
+    "overflows": 0,
+    "errors": [],
+    "hero": {
+      "head": 20,
+      "face": 51
+    },
+    "aboutHoles": null,
+    "menuVisible": "visible",
+    "menuClosed": true
+  }
+]
