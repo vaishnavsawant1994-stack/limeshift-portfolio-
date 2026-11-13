@@ -32,13 +32,38 @@ function updateScroll(){scrollNow=window.scrollY||0;lastScroll=scrollNow;const m
 window.addEventListener('scroll',()=>{if(!scrollPending){scrollPending=true;requestAnimationFrame(()=>{scrollPending=false;updateScroll()})}},{passive:true});let scrollPending=false;window.addEventListener('resize',()=>{measure();updateScroll()},{passive:true});document.fonts?.ready.then(()=>{measure();updateScroll()});window.addEventListener('load',()=>{measure();updateScroll()});measure();updateScroll();
 // Cursor: independent spring-smoothed layers, no CSS transition delays between pointer events.
 let targetX=viewW/2,targetY=viewH/2,smoothX=targetX,smoothY=targetY,ringX=targetX,ringY=targetY,ptrSeen=false;
-let gazeDirection=''; const gazeLayers=$$('.eye-overlay');let gazeNext=0;function applyGaze(dir){if(dir===gazeDirection)return;gazeDirection=dir;gazeLayers.forEach(e=>e.classList.toggle('visible',e.dataset.gaze===dir))}
+let gazeDirection=''; const gazeLayers=$('.eye-overlay');let gazeNext=0;function applyGaze(dir){if(dir===gazeDirection)return;if(dir&&performance.now()<gazeNext)return;gazeDirection=dir;gazeNext=performance.now()+95;gazeLayers.forEach(e=>e.classList.toggle('visible',e.dataset.gaze===dir))}
 
 const ring=$('#cursor-ring'),dot=$('#cursor-dot'),hero=$('.hero'),big=$('#hero-big'),portrait=$('#hero-portrait-wrap'),faceDepth=$('#hero-portrait-depth'),foot=$('#footer-giant');
 function pointer(e){targetX=e.clientX;targetY=e.clientY;ptrSeen=true;if(fine){ring.style.opacity='1';dot.style.opacity='1';}}
 window.addEventListener('pointermove',pointer,{passive:true});window.addEventListener('pointerleave',()=>{ptrSeen=false;ring.style.opacity=0;dot.style.opacity=0});
+let faceAimX=0,faceAimY=0,colorAim=0;
 if(fine&&!reduced){function render(){smoothX=lerp(smoothX,targetX,.11);smoothY=lerp(smoothY,targetY,.11);ringX=lerp(ringX,targetX,.19);ringY=lerp(ringY,targetY,.19);ring.style.transform=`translate3d(${ringX}px,${ringY}px,0)`;dot.style.transform=`translate3d(${targetX}px,${targetY}px,0)`;
- if(hero){const rect=hero.getBoundingClientRect();const relX=(smoothX-rect.left)/Math.max(1,rect.width),relY=(smoothY-rect.top)/Math.max(1,rect.height);const inside=relX>=0&&relX<=1&&relY>=0&&relY<=1;const px=clamp(relX,0,1),py=clamp(relY,0,1);hero.style.setProperty('--hx',`${(px*100).toFixed(2)}%`);hero.style.setProperty('--hy',`${(py*100).toFixed(2)}%`);if(big){const r=big.getBoundingClientRect();const x=(smoothX-r.left)/Math.max(1,r.width);const y=(smoothY-r.top)/Math.max(1,r.height);big.style.setProperty('--mx',`${(clamp(x,0,1)*100).toFixed(1)}%`);big.style.setProperty('--my',`${(clamp(y,0,1)*100).toFixed(1)}%`)}const dx=inside?(px-.5):0,dy=inside?(py-.48):0;let gdir='';if(inside){gdir=(Math.abs(dx)>Math.abs(dy)*1.15)?(dx<-.12?'left':dx>.12?'right':''):(dy<-.12?'up':dy>.12?'down':'')}applyGaze(gdir);portrait.style.setProperty('--portrait-x',`${(dx*37).toFixed(2)}px`);portrait.style.setProperty('--portrait-y',`${(dy*22).toFixed(2)}px`);faceDepth.style.setProperty('--face-rx',`${(dx*12).toFixed(2)}deg`);faceDepth.style.setProperty('--face-ry',`${(-dy*7).toFixed(2)}deg`);portrait.style.setProperty('--fx',`${(45+dx*22).toFixed(2)}%`);portrait.style.setProperty('--fy',`${(34+dy*15).toFixed(2)}%`);
+ if(hero){const rect=hero.getBoundingClientRect();const relX=(smoothX-rect.left)/Math.max(1,rect.width),relY=(smoothY-rect.top)/Math.max(1,rect.height);const inside=relX>=0&&relX<=1&&relY>=0&&relY<=1;const px=clamp(relX,0,1),py=clamp(relY,0,1);hero.style.setProperty('--hx',`${(px*100).toFixed(2)}%`);hero.style.setProperty('--hy',`${(py*100).toFixed(2)}%`);if(big){const r=big.getBoundingClientRect();const x=(smoothX-r.left)/Math.max(1,r.width);const y=(smoothY-r.top)/Math.max(1,r.height);big.style.setProperty('--mx',`${(clamp(x,0,1)*100).toFixed(1)}%`);big.style.setProperty('--my',`${(clamp(y,0,1)*100).toFixed(1)}%`)}const pr=portrait.getBoundingClientRect();
+ const cx=pr.left+pr.width*.52, cy=pr.top+pr.height*.315;
+ const nx=clamp((targetX-cx)/Math.max(1,pr.width*.52),-1,1);
+ const ny=clamp((targetY-cy)/Math.max(1,pr.height*.53),-1,1);
+ const active=ptrSeen&&inside;
+ const aimX=active?nx:0,aimY=active?ny:0;
+ faceAimX=lerp(faceAimX,aimX,.105);faceAimY=lerp(faceAimY,aimY,.105);
+ // Aim at the face center rather than the center of the full hero section.
+ const gdir=!active?'':Math.abs(faceAimX)>Math.abs(faceAimY)*1.1?(faceAimX<-.23?'left':faceAimX>.23?'right':''):(faceAimY<-.24?'up':faceAimY>.24?'down':'');
+ applyGaze(gdir);
+ portrait.style.setProperty('--portrait-x',`${(faceAimX*12).toFixed(2)}px`);
+ portrait.style.setProperty('--portrait-y',`${(faceAimY*8).toFixed(2)}px`);
+ faceDepth.style.setProperty('--face-rx',`${(faceAimX*8).toFixed(2)}deg`);
+ faceDepth.style.setProperty('--face-ry',`${(-faceAimY*5).toFixed(2)}deg`);
+ const localX=clamp((targetX-pr.left)/Math.max(1,pr.width),0,1);
+ const localY=clamp((targetY-pr.top)/Math.max(1,pr.height),0,1);
+ // The visual portrait is narrower than its container; do not illuminate empty hero space.
+ const overFigure=active&&localX>.18&&localX<.83&&localY>.06&&localY<.94;
+ colorAim=lerp(colorAim,overFigure?1:0,overFigure?.19:.12);
+ faceDepth.style.setProperty('--color-intensity',colorAim.toFixed(3));
+ faceDepth.style.setProperty('--color-x',`${(localX*100).toFixed(2)}%`);
+ faceDepth.style.setProperty('--color-y',`${(localY*100).toFixed(2)}%`);
+ portrait.style.setProperty('--fx',`${(localX*100).toFixed(2)}%`);
+ portrait.style.setProperty('--fy',`${(localY*100).toFixed(2)}%`);
+ const dx=active?(px-.5):0,dy=active?(py-.48):0;
  $$('.hero-float-card').forEach(c=>{const depth=parseFloat(c.dataset.depth)||0;c.style.translate=`${(dx*depth*70).toFixed(2)}px ${(dy*depth*65).toFixed(2)}px`;});}
  if(foot){const r=foot.getBoundingClientRect();foot.style.setProperty('--foot-x',`${clamp((smoothX-r.left)/r.width*100,0,100)}%`);foot.style.setProperty('--foot-y',`${clamp((smoothY-r.top)/r.height*100,0,100)}%`)}
  requestAnimationFrame(render)}requestAnimationFrame(render)}
