@@ -30,43 +30,107 @@ function updateScroll(){scrollNow=window.scrollY||0;lastScroll=scrollNow;const m
  if(process){if(hasPinned){const start=process.offsetTop;const end=start+process.offsetHeight-viewH;const t=clamp((scrollNow-start)/Math.max(1,end-start),0,.9999);stage(Math.floor(t*4));}else if(stages.length&&!stages[processIndex].classList.contains('active'))stage(processIndex);}
  let active=null;for(const a of anchors){const section=$(a.getAttribute('href'));if(section&&section.getBoundingClientRect().top<viewH*.37)active=a;}anchors.forEach(a=>a.classList.toggle('active',a===active));}
 window.addEventListener('scroll',()=>{if(!scrollPending){scrollPending=true;requestAnimationFrame(()=>{scrollPending=false;updateScroll()})}},{passive:true});let scrollPending=false;window.addEventListener('resize',()=>{measure();updateScroll()},{passive:true});document.fonts?.ready.then(()=>{measure();updateScroll()});window.addEventListener('load',()=>{measure();updateScroll()});measure();updateScroll();
-// Cursor: independent spring-smoothed layers, no CSS transition delays between pointer events.
+// Cursor and portrait: motion wakes on input, converges, then sleeps.
+// Coordinates are computed against the portrait's untransformed image bounds.
 let targetX=viewW/2,targetY=viewH/2,smoothX=targetX,smoothY=targetY,ringX=targetX,ringY=targetY,ptrSeen=false;
-let gazeDirection=''; const gazeLayers=$('.eye-overlay');let gazeNext=0;function applyGaze(dir){if(dir===gazeDirection)return;if(dir&&performance.now()<gazeNext)return;gazeDirection=dir;gazeNext=performance.now()+95;gazeLayers.forEach(e=>e.classList.toggle('visible',e.dataset.gaze===dir))}
-
-const ring=$('#cursor-ring'),dot=$('#cursor-dot'),hero=$('.hero'),big=$('#hero-big'),portrait=$('#hero-portrait-wrap'),faceDepth=$('#hero-portrait-depth'),foot=$('#footer-giant');
-function pointer(e){targetX=e.clientX;targetY=e.clientY;ptrSeen=true;if(fine){ring.style.opacity='1';dot.style.opacity='1';}}
-window.addEventListener('pointermove',pointer,{passive:true});window.addEventListener('pointerleave',()=>{ptrSeen=false;ring.style.opacity=0;dot.style.opacity=0});
-let faceAimX=0,faceAimY=0,colorAim=0;
-if(fine&&!reduced){function render(){smoothX=lerp(smoothX,targetX,.11);smoothY=lerp(smoothY,targetY,.11);ringX=lerp(ringX,targetX,.19);ringY=lerp(ringY,targetY,.19);ring.style.transform=`translate3d(${ringX}px,${ringY}px,0)`;dot.style.transform=`translate3d(${targetX}px,${targetY}px,0)`;
- if(hero){const rect=hero.getBoundingClientRect();const relX=(smoothX-rect.left)/Math.max(1,rect.width),relY=(smoothY-rect.top)/Math.max(1,rect.height);const inside=relX>=0&&relX<=1&&relY>=0&&relY<=1;const px=clamp(relX,0,1),py=clamp(relY,0,1);hero.style.setProperty('--hx',`${(px*100).toFixed(2)}%`);hero.style.setProperty('--hy',`${(py*100).toFixed(2)}%`);if(big){const r=big.getBoundingClientRect();const x=(smoothX-r.left)/Math.max(1,r.width);const y=(smoothY-r.top)/Math.max(1,r.height);big.style.setProperty('--mx',`${(clamp(x,0,1)*100).toFixed(1)}%`);big.style.setProperty('--my',`${(clamp(y,0,1)*100).toFixed(1)}%`)}const pr=portrait.getBoundingClientRect();
- const cx=pr.left+pr.width*.52, cy=pr.top+pr.height*.315;
- const nx=clamp((targetX-cx)/Math.max(1,pr.width*.52),-1,1);
- const ny=clamp((targetY-cy)/Math.max(1,pr.height*.53),-1,1);
- const active=ptrSeen&&inside;
- const aimX=active?nx:0,aimY=active?ny:0;
- faceAimX=lerp(faceAimX,aimX,.105);faceAimY=lerp(faceAimY,aimY,.105);
- // Aim at the face center rather than the center of the full hero section.
- const gdir=!active?'':Math.abs(faceAimX)>Math.abs(faceAimY)*1.1?(faceAimX<-.23?'left':faceAimX>.23?'right':''):(faceAimY<-.24?'up':faceAimY>.24?'down':'');
- applyGaze(gdir);
- portrait.style.setProperty('--portrait-x',`${(faceAimX*12).toFixed(2)}px`);
- portrait.style.setProperty('--portrait-y',`${(faceAimY*8).toFixed(2)}px`);
- faceDepth.style.setProperty('--face-rx',`${(faceAimX*8).toFixed(2)}deg`);
- faceDepth.style.setProperty('--face-ry',`${(-faceAimY*5).toFixed(2)}deg`);
- const localX=clamp((targetX-pr.left)/Math.max(1,pr.width),0,1);
- const localY=clamp((targetY-pr.top)/Math.max(1,pr.height),0,1);
- // The visual portrait is narrower than its container; do not illuminate empty hero space.
- const overFigure=active&&localX>.18&&localX<.83&&localY>.06&&localY<.94;
- colorAim=lerp(colorAim,overFigure?1:0,overFigure?.19:.12);
- faceDepth.style.setProperty('--color-intensity',colorAim.toFixed(3));
- faceDepth.style.setProperty('--color-x',`${(localX*100).toFixed(2)}%`);
- faceDepth.style.setProperty('--color-y',`${(localY*100).toFixed(2)}%`);
- portrait.style.setProperty('--fx',`${(localX*100).toFixed(2)}%`);
- portrait.style.setProperty('--fy',`${(localY*100).toFixed(2)}%`);
- const dx=active?(px-.5):0,dy=active?(py-.48):0;
- $$('.hero-float-card').forEach(c=>{const depth=parseFloat(c.dataset.depth)||0;c.style.translate=`${(dx*depth*70).toFixed(2)}px ${(dy*depth*65).toFixed(2)}px`;});}
- if(foot){const r=foot.getBoundingClientRect();foot.style.setProperty('--foot-x',`${clamp((smoothX-r.left)/r.width*100,0,100)}%`);foot.style.setProperty('--foot-y',`${clamp((smoothY-r.top)/r.height*100,0,100)}%`)}
- requestAnimationFrame(render)}requestAnimationFrame(render)}
+const ring=$('#cursor-ring'),dot=$('#cursor-dot'),hero=$('.hero'),big=$('#hero-big');
+const portrait=$('#hero-portrait-wrap'),faceDepth=$('#hero-portrait-depth'),portraitImage=$('.hero-portrait:not(.eye-overlay)'),foot=$('#footer-giant');
+const gazeLayers=$$('.eye-overlay');
+let gazeDirection='',gazeChangedAt=0,faceAimX=0,faceAimY=0,colorAim=0,motionFrame=0,alphaMap=null;
+const alphaWidth=160,alphaHeight=214;
+function buildAlphaMap(){
+ if(!portraitImage?.complete||!portraitImage.naturalWidth)return;
+ try{
+   const canvas=document.createElement('canvas');canvas.width=alphaWidth;canvas.height=alphaHeight;
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)return;
+   ctx.clearRect(0,0,alphaWidth,alphaHeight);ctx.drawImage(portraitImage,0,0,alphaWidth,alphaHeight);
+   alphaMap=ctx.getImageData(0,0,alphaWidth,alphaHeight).data;
+ }catch{alphaMap=null;} // Cross-origin or canvas-restricted environments retain conservative fallback.
+}
+if(portraitImage){if(portraitImage.complete)buildAlphaMap();else portraitImage.addEventListener('load',buildAlphaMap,{once:true})}
+function figureHit(x,y){
+ if(x<0||y<0||x>=1||y>=1)return false;
+ if(!alphaMap)return x>.17&&x<.83&&y>.07&&y<.95;
+ const ix=clamp(Math.floor(x*alphaWidth),0,alphaWidth-1);
+ const iy=clamp(Math.floor(y*alphaHeight),0,alphaHeight-1);
+ return alphaMap[(iy*alphaWidth+ix)*4+3]>55;
+}
+function applyGaze(dir){
+ if(dir===gazeDirection)return;
+ if(dir&&performance.now()-gazeChangedAt<105)return;
+ gazeDirection=dir;gazeChangedAt=performance.now();
+ gazeLayers.forEach(el=>el.classList.toggle('visible',el.dataset.gaze===dir));
+}
+function requestMotion(){
+ if(!fine||reduced||document.hidden||motionFrame)return;
+ motionFrame=requestAnimationFrame(renderMotion);
+}
+function pointer(e){
+ if(e.pointerType==='touch')return;
+ targetX=e.clientX;targetY=e.clientY;ptrSeen=true;
+ if(fine&&!reduced){ring.style.opacity='1';dot.style.opacity='1';requestMotion();}
+}
+window.addEventListener('pointermove',pointer,{passive:true});
+window.addEventListener('pointerleave',()=>{
+ ptrSeen=false;if(ring)ring.style.opacity='0';if(dot)dot.style.opacity='0';requestMotion();
+});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestMotion()});
+window.addEventListener('resize',requestMotion,{passive:true});
+window.addEventListener('scroll',requestMotion,{passive:true});
+function renderMotion(){
+ motionFrame=0;
+ const prevSmoothX=smoothX,prevSmoothY=smoothY,prevRingX=ringX,prevRingY=ringY;
+ const prevFaceX=faceAimX,prevFaceY=faceAimY,prevColor=colorAim;
+ smoothX=lerp(smoothX,targetX,.14);smoothY=lerp(smoothY,targetY,.14);
+ ringX=lerp(ringX,targetX,.24);ringY=lerp(ringY,targetY,.24);
+ if(ring)ring.style.transform=`translate3d(${ringX.toFixed(2)}px,${ringY.toFixed(2)}px,0)`;
+ if(dot)dot.style.transform=`translate3d(${targetX}px,${targetY}px,0)`;
+ if(hero&&portrait&&faceDepth){
+  const rect=hero.getBoundingClientRect();
+  const inside=ptrSeen&&targetX>=rect.left&&targetX<=rect.right&&targetY>=rect.top&&targetY<=rect.bottom;
+  const px=clamp((smoothX-rect.left)/Math.max(1,rect.width),0,1),py=clamp((smoothY-rect.top)/Math.max(1,rect.height),0,1);
+  if(rect.bottom>=0&&rect.top<=innerHeight){
+   hero.style.setProperty('--hx',`${(px*100).toFixed(1)}%`);
+   hero.style.setProperty('--hy',`${(py*100).toFixed(1)}%`);
+   if(big){const b=big.getBoundingClientRect();
+    big.style.setProperty('--mx',`${(clamp((smoothX-b.left)/Math.max(1,b.width),0,1)*100).toFixed(1)}%`);
+    big.style.setProperty('--my',`${(clamp((smoothY-b.top)/Math.max(1,b.height),0,1)*100).toFixed(1)}%`);
+   }
+  }
+  const pw=portrait.offsetWidth,ph=portrait.offsetHeight;
+  const left=rect.left+portrait.offsetLeft,top=rect.top+portrait.offsetTop;
+  const imageAspect=(portraitImage?.naturalWidth&&portraitImage?.naturalHeight)?portraitImage.naturalWidth/portraitImage.naturalHeight:1086/1448;
+  const imageWidth=ph*imageAspect,imageLeft=left+(pw-imageWidth)/2;
+  const ix=(targetX-imageLeft)/Math.max(1,imageWidth),iy=(targetY-top)/Math.max(1,ph);
+  const faceX=imageLeft+imageWidth*.51,faceY=top+ph*.33;
+  const aimX=inside?clamp((targetX-faceX)/Math.max(1,imageWidth*.52),-1,1):0;
+  const aimY=inside?clamp((targetY-faceY)/Math.max(1,ph*.49),-1,1):0;
+  faceAimX=lerp(faceAimX,aimX,.13);faceAimY=lerp(faceAimY,aimY,.13);
+  const gdir=!inside?'':Math.abs(faceAimX)>Math.abs(faceAimY)*1.12?(faceAimX<-.25?'left':faceAimX>.25?'right':''):(faceAimY<-.25?'up':faceAimY>.25?'down':'');
+  applyGaze(gdir);
+  portrait.style.setProperty('--portrait-x',`${(faceAimX*11).toFixed(2)}px`);
+  portrait.style.setProperty('--portrait-y',`${(faceAimY*8).toFixed(2)}px`);
+  faceDepth.style.setProperty('--face-rx',`${(faceAimX*8).toFixed(2)}deg`);
+  faceDepth.style.setProperty('--face-ry',`${(-faceAimY*5).toFixed(2)}deg`);
+  const colored=inside&&figureHit(ix,iy);
+  colorAim=lerp(colorAim,colored?1:0,colored?.18:.14);
+  faceDepth.style.setProperty('--color-intensity',colorAim.toFixed(3));
+  faceDepth.style.setProperty('--color-x',`${(clamp(ix,0,1)*100).toFixed(1)}%`);
+  faceDepth.style.setProperty('--color-y',`${(clamp(iy,0,1)*100).toFixed(1)}%`);
+  portrait.style.setProperty('--fx',`${(clamp(ix,0,1)*100).toFixed(1)}%`);
+  portrait.style.setProperty('--fy',`${(clamp(iy,0,1)*100).toFixed(1)}%`);
+  const dx=inside?px-.5:0,dy=inside?py-.48:0;
+  $$('.hero-float-card').forEach(c=>{const depth=parseFloat(c.dataset.depth)||0;c.style.translate=`${(dx*depth*70).toFixed(2)}px ${(dy*depth*65).toFixed(2)}px`;});
+ }
+ if(foot){const r=foot.getBoundingClientRect();
+  if(r.bottom>=0&&r.top<=innerHeight){
+   foot.style.setProperty('--foot-x',`${(clamp((smoothX-r.left)/Math.max(1,r.width),0,1)*100).toFixed(1)}%`);
+   foot.style.setProperty('--foot-y',`${(clamp((smoothY-r.top)/Math.max(1,r.height),0,1)*100).toFixed(1)}%`);
+  }
+ }
+ const delta=Math.max(Math.abs(prevSmoothX-smoothX),Math.abs(prevSmoothY-smoothY),Math.abs(prevRingX-ringX),Math.abs(prevRingY-ringY),Math.abs(prevFaceX-faceAimX)*50,Math.abs(prevFaceY-faceAimY)*50,Math.abs(prevColor-colorAim)*50);
+ if(delta>.10)requestMotion();
+}
 if(fine)$$('a,button,.project-card,.service-card,.tool-tile').forEach(el=>{el.addEventListener('mouseenter',()=>ring.classList.add('hovering'));el.addEventListener('mouseleave',()=>ring.classList.remove('hovering'))});
 $$('.magnetic').forEach(el=>{el.addEventListener('pointermove',e=>{if(!fine||reduced)return;const r=el.getBoundingClientRect();const dx=(e.clientX-r.left-r.width/2),dy=e.clientY-r.top-r.height/2;el.style.transform=`translate3d(${dx*.18}px,${dy*.3}px,0)`});el.addEventListener('pointerleave',()=>{el.style.transform=''})});
 // Services: one active panel at a time, broad active width + local spot light.
