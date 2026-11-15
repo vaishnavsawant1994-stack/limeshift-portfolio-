@@ -2,7 +2,7 @@
 
 **LimeShift** is a dark, motion-rich portfolio theme with neon-lime accents, cursor-responsive effects, scroll-driven storytelling, and a responsive static frontend. **AYRA / Ayra Malik** is the example portfolio currently included. The demo name/content is not the name of the reusable theme.
 
-> **Status:** V6 reference-based reconstruction, not a verified pixel-perfect copy of the original video. See [the QA report](docs/QA_REPORT.md) and [known visual limitations](docs/REFERENCE_AND_RIGHTS.md).
+> **Status:** V7 engineering improvements merged on 15 November 2026. Static GitHub Actions checks pass, but exact reference-video parity, real-device performance, and production deployment are not certified. See [release gate](docs/RELEASE_GATE.md), the historical [V6 QA report](docs/QA_REPORT.md), and [reference limitations](docs/REFERENCE_AND_RIGHTS.md).
 
 ## Run locally
 
@@ -42,13 +42,28 @@ Start by editing `index.html` and the styles/scripts alongside it. Source is **v
 
 To customize the portfolio, replace the AYRA demo copy, portrait, project artworks, profile details, testimonial placeholders, and contact address. Verify usage rights for any real clients or assets you add. **The form validates input and opens a `mailto:` draft; it does not send or persist information to a server.**
 
+## Quality checks and up-to-date standalone preview
+
+Run these from the repository root:
+
+```bash
+python3 scripts/verify_site.py
+node --check app.js
+node --check fidelity.js
+python3 scripts/build_preview.py
+```
+
+GitHub Actions also runs these checks and uploads a freshly generated standalone preview for each build. The committed `preview/limeshift-ayra-standalone.html` is a historical snapshot and may differ from the current source. Use the builder or workflow artifact for current-source preview testing.
+
+The [V7 release gate](docs/RELEASE_GATE.md) separates verified static checks from browser/visual performance tests that still need execution.
+
 ## Deployment
 
 Upload the files from repository root (`index.html`, CSS, JS, and `assets/`) to Hostinger's chosen domain `public_html` folder or any static host. The `preview/` directory is optional, and nothing has been connected to a production domain by this commit. See [deployment guide](docs/DEPLOYMENT.md).
 
 ## Verification and limitations
 
-The V6 QA recording covered 1920×1080, 1440×900, 1366×768, 1024×768, 768×1024, 390×844 and 320×720. See actual [QA results](docs/viewport-qa-results.json) and [motion results](docs/motion-qa-results.json). This GitHub upload is a source-control operation, not a new pixel-parity certification.
+The historical V6 QA recording covered 1920×1080, 1440×900, 1366×768, 1024×768, 768×1024, 390×844 and 320×720. See actual [QA results](docs/viewport-qa-results.json) and [motion results](docs/motion-qa-results.json). This GitHub upload is a source-control operation, not a new pixel-parity certification.
 
 The original template behind the [reference YouTube Short](https://youtube.com/shorts/n7LGSs1H_Bc) was not provided; this package uses newly made replacement media, not its original facial rig, licensed source images or fonts. [Reference and provenance](docs/REFERENCE_AND_RIGHTS.md).
 
