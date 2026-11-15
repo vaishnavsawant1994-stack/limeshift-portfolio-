@@ -1,0 +1,37 @@
+name: LimeShift static quality gate
+
+on:
+  push:
+    branches: [main, "fix/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate HTML structure and media references
+        run: python3 scripts/verify_site.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check fidelity.js
+      - name: Build complete self-contained preview from current source
+        run: python3 scripts/build_preview.py
+      - name: Upload current standalone preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: limeshift-current-standalone-preview
+          path: preview/limeshift-ayra-standalone.html
+          retention-days: 14
