@@ -11,11 +11,26 @@ let introDismissed=false;
 function closeIntro(){if(introDismissed)return;introDismissed=true;intro?.classList.add('done');setTimeout(()=>intro?.remove(),750)}
 if(reduced)closeIntro();else setTimeout(closeIntro,1650);
 $('.skip-intro')?.addEventListener('click',closeIntro);
+intro?.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeIntro()}});
 // Keep direct-link navigation functional even during splash.
 window.addEventListener('hashchange',closeIntro);
 const menu=$('#menu-toggle'),nav=$('#main-nav');
 menu?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Close navigation':'Open navigation');menu.classList.toggle('open',open)});
-$$('#main-nav a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menu?.classList.remove('open');menu?.setAttribute('aria-expanded','false')}));
+$('#main-nav a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menu?.classList.remove('open');menu?.setAttribute('aria-expanded','false')}));
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'&&nav?.classList.contains('open')){
+   nav.classList.remove('open');menu?.classList.remove('open');
+   menu?.setAttribute('aria-expanded','false');
+   menu?.setAttribute('aria-label','Open navigation');menu?.focus();
+ }
+});
+document.addEventListener('pointerdown',e=>{
+ if(nav?.classList.contains('open')&&!nav.contains(e.target)&&!menu?.contains(e.target)){
+   nav.classList.remove('open');menu?.classList.remove('open');
+   menu?.setAttribute('aria-expanded','false');menu?.setAttribute('aria-label','Open navigation');
+ }
+},{passive:true});
+
 // Scroll reveal, active navigation, stable surface-based work.
 const viewObserver='IntersectionObserver' in window ? new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in-view');viewObserver.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px',threshold:.06}):null;
 $$('.reveal').forEach(e=>viewObserver?viewObserver.observe(e):e.classList.add('in-view'));
@@ -30,6 +45,10 @@ function updateScroll(){scrollNow=window.scrollY||0;lastScroll=scrollNow;const m
  if(process){if(hasPinned){const start=process.offsetTop;const end=start+process.offsetHeight-viewH;const t=clamp((scrollNow-start)/Math.max(1,end-start),0,.9999);stage(Math.floor(t*4));}else if(stages.length&&!stages[processIndex].classList.contains('active'))stage(processIndex);}
  let active=null;for(const a of anchors){const section=$(a.getAttribute('href'));if(section&&section.getBoundingClientRect().top<viewH*.37)active=a;}anchors.forEach(a=>a.classList.toggle('active',a===active));}
 window.addEventListener('scroll',()=>{if(!scrollPending){scrollPending=true;requestAnimationFrame(()=>{scrollPending=false;updateScroll()})}},{passive:true});let scrollPending=false;window.addEventListener('resize',()=>{measure();updateScroll()},{passive:true});document.fonts?.ready.then(()=>{measure();updateScroll()});window.addEventListener('load',()=>{measure();updateScroll()});measure();updateScroll();
+$('#work-track img').forEach(image=>{
+ if(!image.complete)image.addEventListener('load',()=>{measure();updateScroll()},{once:true});
+});
+
 // Cursor and portrait: motion wakes on input, converges, then sleeps.
 // Coordinates are computed against the portrait's untransformed image bounds.
 let targetX=viewW/2,targetY=viewH/2,smoothX=targetX,smoothY=targetY,ringX=targetX,ringY=targetY,ptrSeen=false;
@@ -151,8 +170,33 @@ function updateTime(){try{const t=new Date;$('#local-clock').textContent=t.toLoc
 function gotoStage(i){i=clamp(i,0,3);stage(i);if(innerWidth>800){const start=process.offsetTop;const end=start+process.offsetHeight-viewH;scrollToY(start+((i+.12)/4)*(end-start));}}
 $('#process-next')?.addEventListener('click',()=>gotoStage(processIndex+1));$('#process-prev')?.addEventListener('click',()=>gotoStage(processIndex-1));stage(0);
 const scene=$('#process-scene');scene?.addEventListener('pointermove',e=>{if(!fine||reduced)return;const r=scene.getBoundingClientRect(),dx=(e.clientX-r.left)/r.width-.5,dy=(e.clientY-r.top)/r.height-.5;scene.style.setProperty('--step-tilt',`${(dx*2.7).toFixed(2)}deg`);scene.style.setProperty('--step-x',`${(dx*19).toFixed(2)}px`);scene.style.setProperty('--step-y',`${(dy*15).toFixed(2)}px`)});scene?.addEventListener('pointerleave',()=>{scene.style.setProperty('--step-tilt','0deg');scene.style.setProperty('--step-x','0px');scene.style.setProperty('--step-y','0px')});
-// Proximity grid emits the nearest 8 tile lights without any per-tile animations.
-const tools=$$('.tool-tile'),toolGrid=$('#tools-grid');if(fine&&!reduced){toolGrid?.addEventListener('pointermove',e=>{tools.forEach(t=>{const r=t.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,d=Math.hypot(cx-e.clientX,cy-e.clientY);t.classList.toggle('nearby',d<170);t.style.setProperty('--tx',`${(e.clientX-r.left)/r.width*100}%`);t.style.setProperty('--ty',`${(e.clientY-r.top)/r.height*100}%`);if(d<140){t.style.setProperty('--rx',`${((e.clientY-cy)/r.height*5).toFixed(1)}deg`);t.style.setProperty('--ry',`${(-(e.clientX-cx)/r.width*5).toFixed(1)}deg`)}})});toolGrid?.addEventListener('pointerleave',()=>tools.forEach(t=>t.classList.remove('nearby')))}
+// Toolbox proximity: pointer events coalesce to one paint per animation frame.
+const tools=$$('.tool-tile'),toolGrid=$('#tools-grid');
+if(fine&&!reduced&&toolGrid){
+ let toolPointerX=0,toolPointerY=0,toolFrame=0;
+ function paintTools(){
+  toolFrame=0;
+  tools.forEach(t=>{
+   const r=t.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+   const d=Math.hypot(cx-toolPointerX,cy-toolPointerY);
+   t.classList.toggle('nearby',d<170);
+   if(d<185){
+    t.style.setProperty('--tx',`${(toolPointerX-r.left)/Math.max(1,r.width)*100}%`);
+    t.style.setProperty('--ty',`${(toolPointerY-r.top)/Math.max(1,r.height)*100}%`);
+   }
+   t.style.setProperty('--rx',d<140?`${((toolPointerY-cy)/Math.max(1,r.height)*5).toFixed(1)}deg`:'0deg');
+   t.style.setProperty('--ry',d<140?`${(-(toolPointerX-cx)/Math.max(1,r.width)*5).toFixed(1)}deg`:'0deg');
+  });
+ }
+ toolGrid.addEventListener('pointermove',e=>{
+  toolPointerX=e.clientX;toolPointerY=e.clientY;
+  if(!toolFrame)toolFrame=requestAnimationFrame(paintTools);
+ },{passive:true});
+ toolGrid.addEventListener('pointerleave',()=>{
+  if(toolFrame){cancelAnimationFrame(toolFrame);toolFrame=0;}
+  tools.forEach(t=>{t.classList.remove('nearby');t.style.removeProperty('--rx');t.style.removeProperty('--ry')});
+ });
+}
 // Native accessible drag + button reviews. Prevent card text selection while dragging.
 const review=$('#review-viewport');let dragging=false,startX=0,startScroll=0,dragMoved=false;
 review?.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;dragging=true;dragMoved=false;startX=e.clientX;startScroll=review.scrollLeft;review.setPointerCapture(e.pointerId)});
