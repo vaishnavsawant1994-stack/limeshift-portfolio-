@@ -55,3 +55,7 @@ The original template behind the [reference YouTube Short](https://youtube.com/s
 ## Licensing
 
 No open-source license is granted by the mere presence of this public repository. The owner can choose and add a license later. Third-party fonts load from Google Fonts; inspect their separate applicable licenses before redistributing fonts themselves.
+
+## Detailed project documentation
+
+The [**Project Handbook**](docs/PROJECT_HANDBOOK.md) explains this repository individually: product objectives, user journeys, code and technology, current implementation scope, risks, local development, quality gates, and the next engineering milestones. Statements about planned features do not imply release acceptance.
